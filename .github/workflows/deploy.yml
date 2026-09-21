@@ -1,0 +1,52 @@
+name: Deploy React App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fix Vite permission
+        run: chmod +x node_modules/.bin/vite
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Copy build to EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "dist/*"
+          target: "/tmp/practiced-react/"
+
+      - name: Deploy files to Apache
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo rm -rf /var/www/html/*
+            sudo cp -r /tmp/practiced-react/* /var/www/html/
+            sudo chown -R apache:apache /var/www/html
+            sudo find /var/www/html -type d -exec chmod 755 {} \;
+            sudo find /var/www/html -type f -exec chmod 644 {} \;
+            sudo systemctl reload httpd
