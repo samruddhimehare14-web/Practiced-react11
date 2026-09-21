@@ -45,8 +45,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo rm -rf /var/www/html/*
-            sudo cp -r /tmp/practiced-react/* /var/www/html/
+            sudo cp -r /tmp/practiced-react/dist/* /var/www/html/
             sudo chown -R apache:apache /var/www/html
             sudo find /var/www/html -type d -exec chmod 755 {} \;
             sudo find /var/www/html -type f -exec chmod 644 {} \;
             sudo systemctl reload httpd
+
+            echo "Deployed files:"
+            ls -la /var/www/html/
